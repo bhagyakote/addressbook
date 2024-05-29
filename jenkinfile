@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+    tools {
+        maven 'MAVEN'
+    }
+    options {
+  buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '30', numToKeepStr: '1')
+}    
+    environment {
+        Dockerhublogin = credentials('Dockerhublogin')
+    }
+
+
+    stages {
+        stage('Checkout the code') {
+            steps {
+                git 'https://github.com/bhagyakote/addressbook.git'
+            }
+        }
+        
+        stage('Maven BUild') {
+            steps {
+                sh 'mvn package'
+    }
+}
+        stage('Docker Build') {
+            steps {
+                sh 'docker build -t bhagyakote/addressbook1:${BUILD_NUMBER} .'
+            }
+            
+        }
+            
+               
+                
+        stage('Dockerhub Push') {
+            steps {
+                sh 'echo $Dockerhublogin_PSW | docker login -u $Dockerhublogin_USR --password-stdin'   
+                sh 'docker push bhagyakote/addressbook1:${BUILD_NUMBER}'
+            }
+        }
+                
+        stage('Dockerhub run') {
+            steps {
+                sh 'docker run -d -p 8080 --name addressbook bhagyakote/addressbook1:${BUILD_NUMBER}' 
+                
+            }
+        }
+        
+    }
+        
+        post {
+           always {
+             echo "Job is completed"
+    
+                    }
+            success {
+              echo "It is successfull"
+                  }
+            failure {
+              echo "It has failure"
+              }
+           }
+       }
+    
+    
